@@ -70,13 +70,14 @@ def tangency_portfolio(df):
         tickers.append(i)
     tan_port=pd.DataFrame()
     tan_port['tickers']=tickers
-    tan_port['Tangent Weights']=0
+    tan_port['Tangent Weights']=0.0
     for i in range(len(tan_port)):
-        tan_port.loc[i,'Tangent Weights']=wt[i]
+        tan_port.loc[i,'Tangent Weights']=float(round(wt[i], 6))
     
     tan_port.set_index('tickers', inplace=True,drop=True)
 
     return tan_port
+    
 
 def correlation_heatmap(df):
     '''
@@ -116,7 +117,7 @@ def run_regression(df,regressors,annualize_factor=12):
     '''
     Runs a regression for all non-date columns in a dataframe
     Regressors is a dataframe with the regressors as columns
-    Returns a dataframe with the alpha and betas for each asset
+    Returns a dataframe with the alpha, betas, and r2 for each asset
     '''
     res={}
     res_i={}
@@ -128,9 +129,11 @@ def run_regression(df,regressors,annualize_factor=12):
             model.fit(regressors,df[i])
             alpha=model.intercept_*annualize_factor
             betas=model.coef_
+            r2=model.score(regressors, df[i])
             res_i.update({'alpha':alpha})
             for ii in range(len(betas)):
                 res_i.update({'beta_'+str(regressors.columns[ii]):betas[ii]})
+            res_i.update({'r2':r2})
             res.update({i:res_i})
             res_i={}
     
