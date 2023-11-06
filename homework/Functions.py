@@ -3,7 +3,7 @@ import numpy as np
 from sympy import Matrix
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
-from scipy.stats import skew, kurtosis
+from scipy.stats import skew, kurtosis, norm
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -138,4 +138,12 @@ def run_regression(df,regressors,annualize_factor=12):
             res_i={}
     
     return pd.DataFrame(res).transpose()
+
+def prob(mu, sigma, h):
+    '''
+    Returns the probability of underperforming mu
+    over a period h. Make sure that mu and sigma are 
+    from log returns.
+    '''
+    return norm.cdf(np.sqrt(h)*-mu/sigma)
 
