@@ -17,7 +17,7 @@ def calculate_statistics(df, annualize_factor=12, VaR=0.05, CVaR=0.05):
     res_i={}
     for i in df.columns:
         if df[i].dtype=='<M8[ns]':
-            pass
+            Dates=df[i]
         else:
             res_i.update({'mean':np.mean(df[i])*annualize_factor})
             res_i.update({'volatility':np.std(df[i])*(annualize_factor**(1/2))})
@@ -26,7 +26,7 @@ def calculate_statistics(df, annualize_factor=12, VaR=0.05, CVaR=0.05):
             res_i.update({'kurtosis':kurtosis(df[i])})
             res_i.update({'VaR':df[i].quantile(VaR)})
             res_i.update({'CVaR':df[i][df[i]<df[i].quantile(CVaR)].mean()})
-            # res_i.update({'Max_Drawdown':maxDrawD(df[i])})
+            res_i.update({'Max_Drawdown':maxDrawD(Dates,df[i])})
             res.update({i:res_i})
             res_i={}
     return pd.DataFrame(res)
@@ -43,10 +43,58 @@ def calculate_statistics_array(data, annualize_factor=12, VaR=0.05, CVaR=0.05):
     res_i.update({'skewness':skew(data)})
     res_i.update({'kurtosis':kurtosis(data)})
     df=pd.DataFrame(data)
-    res_i.update({'VaR':df.quantile(VaR)})
-    res_i.update({'CVaR':df[df<df.quantile(CVaR)].mean()})
+    res_i.update({'VaR':df.quantile(VaR).iloc[0]})
+    res_i.update({'CVaR':df[df<df.quantile(CVaR)].mean().iloc[0]})
     # res_i.update({'Max_Drawdown':maxDrawD(df[i])})
     return res_i
+
+def maxDrawD(dates, values):
+    """
+    Calculates the maximum drawdown and the dates of the max/min/recovery within the max drawdown period.
+    
+    Parameters:
+    dates (array): An array of dates
+    values (array): An array of values
+    
+    Returns:
+    tuple: A tuple containing the maximum drawdown, the start date of the max drawdown period, 
+    the end date of the max drawdown period, the date of the minimum value, and the date of recovery.
+    """
+    df = pd.DataFrame({'Date': dates, 'Value': values})
+    df.dropna(inplace=True)
+    dates = df['Date'].values
+    values = df['Value'].values
+
+    max_value = values[0]
+    max_date = dates[0]
+    max_drawdown = 0
+    max_drawdown_start_date = dates[0]
+    max_drawdown_min_date = dates[0]
+    max_recovery_date = dates[0]
+    for i in range(1, len(values)):
+        if values[i] > max_value:
+            max_value = values[i]
+            max_date = dates[i]
+            max_recovery_date = dates[i]
+        else:
+            drawdown = (max_value - values[i]) / max_value
+            if drawdown > max_drawdown:
+                max_drawdown = drawdown
+                max_drawdown_start_date = max_date
+                max_drawdown_min_date = dates[i]
+                try:
+                    max_recovery_date = df['Date'].loc[df[(df['Date']>max_date) & (df['Value']>=max_value)].index[0]]
+                except:
+                    max_recovery_date = np.nan
+
+    res={}
+    res.update({'max_drawdown':max_drawdown})
+    res.update({'max_drawdown_start_date':max_drawdown_start_date})
+    res.update({'max_drawdown_min_date':max_drawdown_min_date})
+    res.update({'max_recovery_date':max_recovery_date})
+    
+    return res
+
 
 def tangency_portfolio(df):
     '''
@@ -108,6 +156,7 @@ def calculate_market_statistics(df,regressor, annualize_factor=12):
 
             residuals=np.array(df[i])-model.predict(np.array(regressor).reshape(-1,1))
             res_i.update({'information_ratio':alpha/(np.std(residuals)*annualize_factor**(1/2))})
+            res_i.update({'r2':model.score(np.array(regressor).reshape(-1,1), df[i])})
 
             res.update({i:res_i})
             res_i={}
