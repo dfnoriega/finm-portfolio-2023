@@ -8,9 +8,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def calculate_statistics(df, annualize_factor=12, VaR=0.05, CVaR=0.05):
+def calculate_statistics(df, annualize_factor=12, VaR=0.05, CVaR=0.05, dropdown=False):
     '''
-    Calculates the mean, volatility, sharpe, skewness, kurtosis, VaR and CVaR of a dataframe
+    Calculates the mean, volatility, sharpe, skewness, kurtosis, VaR, CVaR and dropdown stats of a dataframe
     Returns a dataframe with values for each asset
     '''
     res={}
@@ -26,7 +26,8 @@ def calculate_statistics(df, annualize_factor=12, VaR=0.05, CVaR=0.05):
             res_i.update({'kurtosis':kurtosis(df[i])})
             res_i.update({'VaR':df[i].quantile(VaR)})
             res_i.update({'CVaR':df[i][df[i]<df[i].quantile(CVaR)].mean()})
-            res_i.update({'Max_Drawdown':maxDrawD(Dates,df[i])})
+            if dropdown:
+                res_i.update({'Max_Drawdown':maxDrawD(Dates,df[i])})
             res.update({i:res_i})
             res_i={}
     return pd.DataFrame(res)
