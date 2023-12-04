@@ -55,8 +55,8 @@ def calc_univariate_regression(y, X, intercept=True, adj=12):
     model = sm.OLS(y, X, missing="drop")
     results = model.fit()
 
-    inter = results.params[0] if intercept else 0
-    beta = results.params[1] if intercept else results.params[0]
+    inter = results.params.iloc[0] if intercept else 0
+    beta = results.params.iloc[1] if intercept else results.params.iloc[0]
 
     summary = dict()
 
@@ -64,7 +64,7 @@ def calc_univariate_regression(y, X, intercept=True, adj=12):
     summary["Beta"] = beta
 
     down_mod = sm.OLS(y_down, X_down, missing="drop").fit()
-    summary["Downside Beta"] = down_mod.params[1] if intercept else down_mod.params[0]
+    summary["Downside Beta"] = down_mod.params.iloc[1] if intercept else down_mod.params.iloc[0]
 
     summary["R-Squared"] = results.rsquared
     summary["Treynor Ratio"] = (y.mean() / beta) * adj
@@ -74,9 +74,11 @@ def calc_univariate_regression(y, X, intercept=True, adj=12):
         if intercept
         else results.resid.std() * np.sqrt(adj)
     )
-
-    return pd.DataFrame(summary, index=[y.name])
-
+    
+    if isinstance(y, pd.Series):
+        return pd.DataFrame(summary, index=[y.name])
+    else:
+        return pd.DataFrame(summary, index=y.columns)
 
 def calc_multivariate_regression(y, X, intercept=True, adj=12):
     """
@@ -100,8 +102,8 @@ def calc_multivariate_regression(y, X, intercept=True, adj=12):
     results = model.fit()
     summary = dict()
 
-    inter = results.params[0] if intercept else 0
-    betas = results.params[1:] if intercept else results.params
+    inter = results.params.iloc[0] if intercept else 0
+    betas = results.params.iloc[1:] if intercept else results.params
 
     summary["Alpha"] = inter * adj
     summary["R-Squared"] = results.rsquared
@@ -113,7 +115,11 @@ def calc_multivariate_regression(y, X, intercept=True, adj=12):
 
     summary["Information Ratio"] = (inter / results.resid.std()) * np.sqrt(adj)
     summary["Tracking Error"] = results.resid.std() * np.sqrt(adj)
-    return pd.DataFrame(summary, index=[y.name])
+    
+    if isinstance(y, pd.Series):
+        return pd.DataFrame(summary, index=[y.name])
+    else:
+        return pd.DataFrame(summary, index=y.columns)
 
 
 def calc_iterative_regression(y, X, intercept=True, one_to_many=False, adj=12):
