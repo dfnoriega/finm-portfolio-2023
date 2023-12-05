@@ -63,36 +63,26 @@ def maxDrawD(dates, values):
     """
     df = pd.DataFrame({'Date': dates, 'Value': values})
     df.dropna(inplace=True)
+    df.reset_index(drop=True, inplace=True)
     dates = df['Date'].values
     values = df['Value'].values
 
-    max_value = values[0]
-    max_date = dates[0]
-    max_drawdown = 0
-    max_drawdown_start_date = dates[0]
-    max_drawdown_min_date = dates[0]
-    max_recovery_date = dates[0]
-    for i in range(1, len(values)):
-        if values[i] > max_value:
-            max_value = values[i]
-            max_date = dates[i]
-            max_recovery_date = dates[i]
-        else:
-            drawdown = (max_value - values[i]) / max_value
-            if drawdown > max_drawdown:
-                max_drawdown = drawdown
-                max_drawdown_start_date = max_date
-                max_drawdown_min_date = dates[i]
-                try:
-                    max_recovery_date = df['Date'].loc[df[(df['Date']>max_date) & (df['Value']>=max_value)].index[0]]
-                except:
-                    max_recovery_date = np.nan
+    wealth_index = 1000 * (1 + df['Value']).cumprod()
+    previous_peaks = wealth_index.cummax()
+    drawdowns = (wealth_index - previous_peaks) / previous_peaks
+
+    prev_max=previous_peaks[:drawdowns.idxmin()].idxmax()
+    recovery_wealth=wealth_index[drawdowns.idxmin():]
+    try:
+        recovery_date=df['Date'].loc[recovery_wealth[recovery_wealth>=previous_peaks[prev_max]].index[0]]
+    except:
+        recovery_date=np.nan
 
     res={}
-    res.update({'max_drawdown':max_drawdown})
-    res.update({'max_drawdown_start_date':max_drawdown_start_date})
-    res.update({'max_drawdown_min_date':max_drawdown_min_date})
-    res.update({'max_recovery_date':max_recovery_date})
+    res.update({'max_drawdown': drawdowns.min()})
+    res.update({'max_drawdown_start_date':df['Date'].loc[previous_peaks[:drawdowns.idxmin()].idxmax()]})
+    res.update({'max_drawdown_min_date':df['Date'].loc[drawdowns.idxmin()]})
+    res.update({'max_recovery_date':recovery_date})
     
     return res
 
